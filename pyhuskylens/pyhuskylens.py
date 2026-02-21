@@ -54,51 +54,61 @@ _CMD_REQUEST_CLEAR_TEXT = const(0x35)
 _CMD_REQUEST_FIRMWARE_VERSION = const(0x3C)
 
 # Internal V2 Commands
-_CMD_KNOCK_V2 = const(0x20)
-_CMD_GET_RESULT_V2 = const(0x21)
-_CMD_SET_ALGORITHM_V2 = const(0x30)
-_CMD_SET_MULTI_ALGORITHM_V2 = const(0x32)
+_CMD_KNOCK_V2 = const(0x00)
+_CMD_GET_RESULT_V2 = const(0x01)
+_CMD_SET_ALGORITHM_V2 = const(0x0A)
+_CMD_SET_MULTI_ALGORITHM_V2 = const(0x0C)
 _CMD_SET_MULTI_ALGORITHM_RATIO_V2 = const(0x33)
-_CMD_RETURN_OK_V2 = const(0x40)
-_CMD_RETURN_INFO_V2 = const(0x42)
-_CMD_RETURN_BLOCK_V2 = const(0x43)
-_CMD_RETURN_ARROW_V2 = const(0x44)
-_CMD_ACTION_DRAW_TEXT_V2 = const(0x58)
-_CMD_ACTION_CLEAR_TEXT_V2 = const(0x59)
-_CMD_ACTION_DRAW_RECT_V2 = const(0x56)
-_CMD_ACTION_CLEAN_RECT_V2 = const(0x57)
+_CMD_RETURN_OK_V2 = const(0x1A)
+_CMD_RETURN_INFO_V2 = const(0x1B)
+_CMD_RETURN_BLOCK_V2 = const(0x1C)
+_CMD_RETURN_ARROW_V2 = const(0x1D)
+_CMD_ACTION_DRAW_TEXT_V2 = const(0x28)
+_CMD_ACTION_CLEAR_TEXT_V2 = const(0x29)
+_CMD_ACTION_DRAW_RECT_V2 = const(0x26)
+_CMD_ACTION_CLEAN_RECT_V2 = const(0x27)
 
 # Algorithm constants for selecting detection modes
 #: Main menu screen (no detection active)
 ALGORITHM_MENU = const(0)
 #: Face recognition with ID assignment and learning
 ALGORITHM_FACE_RECOGNITION = const(1)
-#: Object tracking - follows detected objects across frames
-ALGORITHM_OBJECT_TRACKING = const(2)
 #: Object recognition - detects and classifies objects
-ALGORITHM_OBJECT_RECOGNITION = const(3)
-#: Line tracking - detects lines and arrows for line following
-ALGORITHM_LINE_TRACKING = const(4)
+ALGORITHM_OBJECT_RECOGNITION = const(2)
+#: Object tracking - follows detected objects across frames
+ALGORITHM_OBJECT_TRACKING = const(3)
 #: Color recognition - identifies colors in blocks
-ALGORITHM_COLOR_RECOGNITION = const(5)
-#: AprilTag recognition - detects fiducial markers
-ALGORITHM_TAG_RECOGNITION = const(6)
+ALGORITHM_COLOR_RECOGNITION  = const(4)
 #: Object classification - categorizes objects into classes
-ALGORITHM_OBJECT_CLASSIFICATION = const(7)
-#: Optical character recognition - reads text
-ALGORITHM_OCR = const(8)
-#: License plate recognition (V2 only)
-ALGORITHM_LICENSE_RECOGNITION = const(9)
-#: QR code recognition - reads QR codes
-ALGORITHM_QR_CODE_RECOGNITION = const(10)
-#: Barcode recognition - reads barcodes
-ALGORITHM_BARCODE_RECOGNITION = const(11)
-#: Face emotion recognition - detects facial expressions (V2 only)
-ALGORITHM_FACE_EMOTION_RECOGNITION = const(12)
-#: Pose recognition - detects body keypoints (V2 only)
-ALGORITHM_POSE_RECOGNITION = const(13)
+ALGORITHM_OBJECT_CLASSIFICATION = const(5)
+#: AprilTag recognition - detects fiducial markers
+ALGORITHM_SELF_LEARNING_CLASSIFICATION  = const(6)
+#: algorithm for segmenting objects (V2 only) - detects object contours and segments
+ALGORITHM_SEGMENT   = const(7)
 #: Hand recognition - detects hand keypoints (V2 only)
-ALGORITHM_HAND_RECOGNITION = const(14)
+ALGORITHM_HAND_RECOGNITION  = const(8)
+#: Pose recognition - detects body keypoints (V2 only)
+ALGORITHM_POSE_RECOGNITION  = const(9)
+#: License plate recognition (V2 only)
+ALGORITHM_LICENSE_RECOGNITION  = const(10)
+#: Optical character recognition - reads text
+ALGORITHM_OCR_RECOGNITION = const(11)
+#: Line tracking - detects lines and arrows for line following
+ALGORITHM_LINE_TRACKING  = const(12)
+#: Face emotion recognition - detects facial expressions (V2 only)
+ALGORITHM_EMOTION_RECOGNITION  = const(13)
+#: Gaze recognition - detects eye gaze direction (V2 only)
+ALGORITHM_GAZE_RECOGNITION  = const(14)
+#: Face orientation recognition - detects head pose (V2 only)
+ALGORITHM_FACE_ORIENTATION = const(15)
+#: Tag recognition - detects fiducial markers like AprilTags
+ALGORITHM_TAG_RECOGNITION = const(16)
+#: Barcode recognition - reads barcodes
+ALGORITHM_BARCODE_RECOGNITION = const(17)
+#: QR code recognition - reads QR code
+ALGORITHM_QRCODE_RECOGNITION = const(18)
+#: Fall down recognition - detects if a person has fallen (V2 only)
+ALGORITHM_FALLDOWN_RECOGNITION = const(19)
 
 # Color constants for text and drawing operations
 #: Black color (0)
@@ -957,7 +967,10 @@ class HuskyLensI2C(HuskyLensBase):
         # Only V2 needs flushing
         if self.version == 2:
             for _ in range(5):
-                self.i2c.readfrom(self.address, 16)
+                try:
+                   self.i2c.readfrom(self.address, 16)
+                except OSError:
+                    print("I2C flush error")
 
 
 class HuskyLensSerial(HuskyLensBase):
