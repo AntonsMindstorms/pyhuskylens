@@ -3,7 +3,7 @@ HuskyLens Universal Driver for MicroPython
 Supports V1 and V2 hardware with I2C and Serial interfaces
 """
 
-__version__ = "2.2.0"
+__version__ = "2.2.1"
 __author__ = "Anton Vanhoucke"
 __copyright__ = "Copyright (c) 2025 Antons Mindstorms"
 __license__ = "MIT"
@@ -68,47 +68,37 @@ _CMD_ACTION_CLEAR_TEXT_V2 = const(0x29)
 _CMD_ACTION_DRAW_RECT_V2 = const(0x26)
 _CMD_ACTION_CLEAN_RECT_V2 = const(0x27)
 
-# Algorithm constants for selecting detection modes
-#: Main menu screen (no detection active)
-ALGORITHM_MENU = const(0)
-#: Face recognition with ID assignment and learning
-ALGORITHM_FACE_RECOGNITION = const(1)
-#: Object recognition - detects and classifies objects
+ALGORITHM_MENU_V2 = const(0)
+ALGORITHM_MENU = const(0) # Bw-compatibility alias for menu mode, which is V2 only and has no V1 equivalent
+ALGORITHM_FACE_RECOGNITION_V2 = const(1)
+ALGORITHM_OBJECT_RECOGNITION_V2 = const(2)
+ALGORITHM_OBJECT_TRACKING_V2 = const(3)
+ALGORITHM_COLOR_RECOGNITION_V2 = const(4)
+ALGORITHM_OBJECT_CLASSIFICATION_V2 = const(5)
+ALGORITHM_SELF_LEARNING_CLASSIFICATION_V2 = const(6)
+ALGORITHM_SEGMENT_V2 = const(7)
+ALGORITHM_HAND_RECOGNITION_V2 = const(8)
+ALGORITHM_POSE_RECOGNITION_V2 = const(9)
+ALGORITHM_LICENSE_RECOGNITION_V2 = const(10)
+ALGORITHM_OCR_RECOGNITION_V2 = const(11)
+ALGORITHM_LINE_TRACKING_V2 = const(12)
+ALGORITHM_EMOTION_RECOGNITION_V2 = const(13)
+ALGORITHM_GAZE_RECOGNITION_V2 = const(14)
+ALGORITHM_FACE_ORIENTATION_V2 = const(15)
+ALGORITHM_TAG_RECOGNITION_V2 = const(16)
+ALGORITHM_BARCODE_RECOGNITION_V2 = const(17)
+ALGORITHM_QRCODE_RECOGNITION_V2 = const(18)
+ALGORITHM_FALLDOWN_RECOGNITION_V2 = const(19)
+
+ALGORITHM_FACE_RECOGNITION = const(0)
+ALGORITHM_OBJECT_TRACKING = const(1)
 ALGORITHM_OBJECT_RECOGNITION = const(2)
-#: Object tracking - follows detected objects across frames
-ALGORITHM_OBJECT_TRACKING = const(3)
-#: Color recognition - identifies colors in blocks
-ALGORITHM_COLOR_RECOGNITION  = const(4)
-#: Object classification - categorizes objects into classes
-ALGORITHM_OBJECT_CLASSIFICATION = const(5)
-#: AprilTag recognition - detects fiducial markers
-ALGORITHM_SELF_LEARNING_CLASSIFICATION  = const(6)
-#: algorithm for segmenting objects (V2 only) - detects object contours and segments
-ALGORITHM_SEGMENT   = const(7)
-#: Hand recognition - detects hand keypoints (V2 only)
-ALGORITHM_HAND_RECOGNITION  = const(8)
-#: Pose recognition - detects body keypoints (V2 only)
-ALGORITHM_POSE_RECOGNITION  = const(9)
-#: License plate recognition (V2 only)
-ALGORITHM_LICENSE_RECOGNITION  = const(10)
-#: Optical character recognition - reads text
-ALGORITHM_OCR_RECOGNITION = const(11)
-#: Line tracking - detects lines and arrows for line following
-ALGORITHM_LINE_TRACKING  = const(12)
-#: Face emotion recognition - detects facial expressions (V2 only)
-ALGORITHM_EMOTION_RECOGNITION  = const(13)
-#: Gaze recognition - detects eye gaze direction (V2 only)
-ALGORITHM_GAZE_RECOGNITION  = const(14)
-#: Face orientation recognition - detects head pose (V2 only)
-ALGORITHM_FACE_ORIENTATION = const(15)
-#: Tag recognition - detects fiducial markers like AprilTags
-ALGORITHM_TAG_RECOGNITION = const(16)
-#: Barcode recognition - reads barcodes
-ALGORITHM_BARCODE_RECOGNITION = const(17)
-#: QR code recognition - reads QR code
-ALGORITHM_QRCODE_RECOGNITION = const(18)
-#: Fall down recognition - detects if a person has fallen (V2 only)
-ALGORITHM_FALLDOWN_RECOGNITION = const(19)
+ALGORITHM_LINE_TRACKING = const(3)
+ALGORITHM_COLOR_RECOGNITION = const(4)
+ALGORITHM_TAG_RECOGNITION = const(5)
+ALGORITHM_OBJECT_CLASSIFICATION = const(6)
+ALGORITHM_QR_CODE_RECOGNITION = const(7)
+ALGORITHM_BARCODE_RECOGNITION = const(8)
 
 # Color constants for text and drawing operations
 #: Black color (0)
@@ -649,32 +639,57 @@ class HuskyLensBase:
         self.connected = False
         return False
 
-    def set_alg(self, algorithm=None):
-        """Switch algorithm."""
-        if algorithm is None:
-            algorithm = self.current_algorithm
-
-        v = self.version  # Cache version check
-        if algorithm == self.current_algorithm and v == 2:
-            return True
-
-        if v == 1:
-            # check algo available, and +1 for V1 indexing
-            if 0 < algorithm < 7:
-                algorithm -= 1
-            elif 10 <= algorithm <= 11:
-                algorithm -= 3
-            payload = bytearray(struct.pack("h", algorithm))
+    def set_alg(self, id):
+        """Switch to algorithm id."""
+        if self.version == 1:
+            payload = bytearray(struct.pack("h", id))
             self._cmd_v1(_CMD_REQUEST_ALGORITHM, payload)
         else:  # V2
-            content = bytearray([algorithm, 0])
+            content = bytearray([id, 0])
             content.extend(struct.pack("<hhhh", 0, 0, 0, 0))
             self._cmd_v2(_CMD_SET_ALGORITHM_V2, 0, content)
+        self.current_algorithm = id
+        return self.knock()  # Wait for confirmation that algorithm switch was successful
 
-        result = self.knock()
-        if result:
-            self.current_algorithm = algorithm
-        return result
+    def mode_object_recognition(self):
+        """Switch to object recognition mode."""
+        alg = ALGORITHM_OBJECT_RECOGNITION_V2 if self.version == 2 else ALGORITHM_OBJECT_RECOGNITION
+        return self.set_alg(alg)
+    
+    def mode_face_recognition(self):
+        """Switch to face recognition mode."""
+        alg = ALGORITHM_FACE_RECOGNITION_V2 if self.version == 2 else ALGORITHM_FACE_RECOGNITION
+        return self.set_alg(alg)
+    
+    def mode_line_tracking(self):
+        """Switch to line tracking mode."""
+        alg = ALGORITHM_LINE_TRACKING_V2 if self.version == 2 else ALGORITHM_LINE_TRACKING
+        return self.set_alg(alg)
+    
+    def mode_color_recognition(self):
+        """Switch to color recognition mode."""
+        alg = ALGORITHM_COLOR_RECOGNITION_V2 if self.version == 2 else ALGORITHM_COLOR_RECOGNITION
+        return self.set_alg(alg)
+    
+    def mode_tag_recognition(self):
+        """Switch to tag recognition mode."""
+        alg = ALGORITHM_TAG_RECOGNITION_V2 if self.version == 2 else ALGORITHM_TAG_RECOGNITION
+        return self.set_alg(alg)
+    
+    def mode_object_classification(self):
+        """Switch to object classification mode."""
+        alg = ALGORITHM_OBJECT_CLASSIFICATION_V2 if self.version == 2 else ALGORITHM_OBJECT_CLASSIFICATION
+        return self.set_alg(alg)
+
+    def mode_qr_code_recognition(self):
+        """Switch to QR code recognition mode."""
+        alg = ALGORITHM_QRCODE_RECOGNITION_V2 if self.version == 2 else ALGORITHM_QR_CODE_RECOGNITION
+        return self.set_alg(alg)
+    
+    def mode_barcode_recognition(self):
+        """Switch to barcode recognition mode."""
+        alg = ALGORITHM_BARCODE_RECOGNITION_V2 if self.version == 2 else ALGORITHM_BARCODE_RECOGNITION
+        return self.set_alg(alg)
 
     def set_multi_alg(self, *algorithms):
         """Set multiple algorithms (V2 only)."""
@@ -804,6 +819,18 @@ class HuskyLensBase:
     def get_arrows(self, algorithm=None, ID=None, learned=False):
         """Get arrows only."""
         return self.get(algorithm, ID, learned)[ARROWS]
+    
+    def get_faces(self, algorithm=None, ID=None, learned=False):
+        """Get faces only (V2 only)."""
+        return self.get(algorithm, ID, learned)[FACES]
+    
+    def get_hands(self, algorithm=None, ID=None, learned=False):
+        """Get hands only (V2 only)."""
+        return self.get(algorithm, ID, learned)[HANDS]
+    
+    def get_poses(self, algorithm=None, ID=None, learned=False):
+        """Get poses only (V2 only)."""
+        return self.get(algorithm, ID, learned)[POSES]
 
     @native
     def _parse_v2(self, data, algorithm):
@@ -862,11 +889,11 @@ class HuskyLensBase:
         # Return appropriate class
         try:
             if cmd == _CMD_RETURN_BLOCK_V2:
-                if algorithm == ALGORITHM_FACE_RECOGNITION and keypoints:
+                if algorithm == ALGORITHM_FACE_RECOGNITION_V2 and keypoints:
                     return Face(x, y, w, h, ID, conf, name, content, keypoints)
-                elif algorithm == ALGORITHM_HAND_RECOGNITION and keypoints:
+                elif algorithm == ALGORITHM_HAND_RECOGNITION_V2 and keypoints:
                     return Hand(x, y, w, h, ID, conf, name, content, keypoints)
-                elif algorithm == ALGORITHM_POSE_RECOGNITION and keypoints:
+                elif algorithm == ALGORITHM_POSE_RECOGNITION_V2 and keypoints:
                     return Pose(x, y, w, h, ID, conf, name, content, keypoints)
                 else:
                     return Block(x, y, w, h, ID, conf, name, content)
@@ -938,14 +965,17 @@ class HuskyLensI2C(HuskyLensBase):
         self.use_register = False
         self._detect_version()
 
+    def __str__(self):
+        return "HuskyLens V%d @ %s, address 0x%02X" % (self.version, self.i2c, self.address) if self.version else "HuskyLens (undetected)"
+
     def _detect_version(self):
         devices = self.i2c.scan()
         if _I2C_ADDR_V1 in devices:
             self.version, self.address = 1, _I2C_ADDR_V1
         elif _I2C_ADDR_V2 in devices:
             self.version, self.address = 2, _I2C_ADDR_V2
-        if self.debug and self.version:
-            print("HuskyLens V" + str(self.version) + " @ 0x" + hex(self.address)[2:])
+        if self.debug:
+            print(self)
 
     def _transport_write(self, data):
         if self.version == 1:
@@ -968,7 +998,7 @@ class HuskyLensI2C(HuskyLensBase):
         if self.version == 2:
             for _ in range(5):
                 try:
-                   self.i2c.readfrom(self.address, 16)
+                    self.i2c.readfrom(self.address, 16)
                 except OSError:
                     print("I2C flush error")
 
@@ -982,13 +1012,14 @@ class HuskyLensSerial(HuskyLensBase):
         # Abstract waiting method
         if hasattr(uart, "lower"):
             from hub import port
+
             self.uart = eval("port." + uart)
         if hasattr(uart, "mode"):
             uart.mode(1)  # UART mode
             sleep_ms(300)
             uart.baud(115200)
             uart.pwm(100)  # Power the device
-            
+
         if hasattr(self.uart, "waiting"):
             self._has_data = lambda: self.uart.waiting()
         elif hasattr(self.uart, "any"):
