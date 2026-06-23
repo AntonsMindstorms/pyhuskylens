@@ -6,7 +6,7 @@
 
 ```bash
 source .venv/bin/activate
-rm dist/ -rf && python -m build
+rm -rf dist && python -m build
 twine upload --repository testpypi dist/*
 ```
 
